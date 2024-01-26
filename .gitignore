@@ -1,0 +1,9 @@
+### Application ###
+bin/
+*.json
+
+### Project ###
+TODO.md
+
+### macOS ###
+.DS_Store
