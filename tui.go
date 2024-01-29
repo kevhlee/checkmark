@@ -129,8 +129,9 @@ var keys = KeyMap{
 type TUI struct {
 	Tasks []Task
 
-	cursor int
-	help   help.Model
+	cursor   int
+	help     help.Model
+	quitting bool
 }
 
 func StartTUI(config *Config) error {
@@ -195,6 +196,7 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.help.ShowAll = !t.help.ShowAll
 
 		case key.Matches(msg, keys.Quit):
+			t.quitting = true
 			cmd = tea.Quit
 		}
 
@@ -226,6 +228,10 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t TUI) View() string {
+	if t.quitting {
+		return ""
+	}
+
 	tasksView := strings.Builder{}
 
 	for i, task := range t.Tasks {
