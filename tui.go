@@ -195,7 +195,7 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Help):
 			t.help.ShowAll = !t.help.ShowAll
 
-		case key.Matches(msg, keys.Quit):
+		case key.Matches(msg, keys.Quit) || msg.String() == "q":
 			t.quitting = true
 			cmd = tea.Quit
 		}
