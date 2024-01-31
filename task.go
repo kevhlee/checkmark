@@ -16,11 +16,11 @@ type Task struct {
 	Done bool   `json:"done"`
 }
 
-type Config struct {
+type TaskConfig struct {
 	Tasks []Task `json:"tasks"`
 }
 
-func InitConfig() (*Config, error) {
+func InitTaskConfig() (*TaskConfig, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func InitConfig() (*Config, error) {
 		}
 	}
 
-	config := Config{}
+	config := TaskConfig{}
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -53,7 +53,7 @@ func InitConfig() (*Config, error) {
 	return &config, nil
 }
 
-func StoreConfig(config *Config) error {
+func StoreTaskConfig(config *TaskConfig) error {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return err

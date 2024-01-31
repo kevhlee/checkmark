@@ -127,25 +127,23 @@ var keys = KeyMap{
 //
 
 type TUI struct {
-	Tasks []Task
-
 	cursor   int
 	help     help.Model
 	quitting bool
+	tasks    []Task
 }
 
-func StartTUI(config *Config) error {
+func StartTUI(config *TaskConfig) error {
 	tui := &TUI{
-		Tasks:  config.Tasks,
-		cursor: 0,
-		help:   help.New(),
+		tasks: config.Tasks,
+		help:  help.New(),
 	}
 
-	model, err := tea.NewProgram(tui).Run()
-	if err != nil {
+	if _, err := tea.NewProgram(tui).Run(); err != nil {
 		return err
 	}
-	config.Tasks = model.(*TUI).Tasks
+
+	config.Tasks = tui.tasks
 	return nil
 }
 
@@ -164,25 +162,25 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return form, form.Init()
 
 		case key.Matches(msg, keys.Edit):
-			if len(t.Tasks) > 0 {
-				form := NewForm(t, true, t.Tasks[t.cursor].Name)
+			if len(t.tasks) > 0 {
+				form := NewForm(t, true, t.tasks[t.cursor].Name)
 				return form, form.Init()
 			}
 
 		case key.Matches(msg, keys.Check):
-			if len(t.Tasks) > 0 {
-				t.Tasks[t.cursor].Done = !t.Tasks[t.cursor].Done
+			if len(t.tasks) > 0 {
+				t.tasks[t.cursor].Done = !t.tasks[t.cursor].Done
 			}
 
 		case key.Matches(msg, keys.Clear):
-			if len(t.Tasks) > 0 {
-				confirm := NewConfirm(t, ClearCompletedTasks, "Clear completed tasks?")
+			if len(t.tasks) > 0 {
+				confirm := NewConfirmPrompt(t, ClearCompletedTasks, "Clear completed tasks?")
 				return confirm, confirm.Init()
 			}
 
 		case key.Matches(msg, keys.Delete):
-			if len(t.Tasks) > 0 {
-				confirm := NewConfirm(t, DeleteTask, fmt.Sprintf("Delete '%s'?", t.Tasks[t.cursor].Name))
+			if len(t.tasks) > 0 {
+				confirm := NewConfirmPrompt(t, DeleteTask, fmt.Sprintf("Delete '%s'?", t.tasks[t.cursor].Name))
 				return confirm, confirm.Init()
 			}
 
@@ -200,15 +198,15 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd = tea.Quit
 		}
 
-	case Confirm:
-		if msg.confirmation {
-			switch msg.action {
+	case ConfirmPrompt:
+		if msg.Confirmation {
+			switch msg.Action {
 			case DeleteTask:
-				t.Tasks = append(t.Tasks[:t.cursor], t.Tasks[t.cursor+1:]...)
+				t.tasks = append(t.tasks[:t.cursor], t.tasks[t.cursor+1:]...)
 				t.NormalizeCursor()
 
 			case ClearCompletedTasks:
-				t.Tasks = slices.DeleteFunc(t.Tasks, func(task Task) bool {
+				t.tasks = slices.DeleteFunc(t.tasks, func(task Task) bool {
 					return task.Done
 				})
 				t.NormalizeCursor()
@@ -217,9 +215,9 @@ func (t *TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case Form:
 		if msg.edit {
-			t.Tasks[t.cursor].Name = msg.title.Value()
+			t.tasks[t.cursor].Name = msg.titlePrompt.Value()
 		} else {
-			t.Tasks = append(t.Tasks, Task{Name: msg.title.Value()})
+			t.tasks = append(t.tasks, Task{Name: msg.titlePrompt.Value()})
 		}
 
 	}
@@ -232,31 +230,26 @@ func (t TUI) View() string {
 		return ""
 	}
 
-	tasksView := strings.Builder{}
+	view := strings.Builder{}
 
-	for i, task := range t.Tasks {
+	for i, task := range t.tasks {
 		if i == t.cursor {
-			tasksView.WriteString(cursorSelected)
+			view.WriteString(cursorSelected)
 		} else {
-			tasksView.WriteString(cursorUnselected)
+			view.WriteString(cursorUnselected)
 		}
 
 		if task.Done {
-			tasksView.WriteString(statusDone)
+			view.WriteString(statusDone)
 		} else {
-			tasksView.WriteString(statusPending)
+			view.WriteString(statusPending)
 		}
 
-		tasksView.WriteString(task.Name)
-		tasksView.WriteString("\n")
+		view.WriteString(task.Name)
+		view.WriteString("\n")
 	}
 
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		styleHeader.Render("Tasks: "),
-		tasksView.String(),
-		t.help.View(keys),
-	)
+	return lipgloss.JoinVertical(lipgloss.Left, styleHeader.Render("Tasks: "), view.String(), t.help.View(keys))
 }
 
 func (t *TUI) PrevTask() {
@@ -264,14 +257,14 @@ func (t *TUI) PrevTask() {
 }
 
 func (t *TUI) NextTask() {
-	t.cursor = min(t.cursor+1, len(t.Tasks)-1)
+	t.cursor = min(t.cursor+1, len(t.tasks)-1)
 }
 
 func (t *TUI) NormalizeCursor() {
-	if len(t.Tasks) == 0 {
+	if len(t.tasks) == 0 {
 		t.cursor = 0
 	} else {
-		t.cursor = min(t.cursor, len(t.Tasks)-1)
+		t.cursor = min(t.cursor, len(t.tasks)-1)
 	}
 }
 
@@ -280,21 +273,20 @@ func (t *TUI) NormalizeCursor() {
 //
 
 type Form struct {
-	parent tea.Model
-
-	edit  bool
-	title textinput.Model
+	edit        bool
+	parent      tea.Model
+	titlePrompt textinput.Model
 }
 
 func NewForm(parent tea.Model, edit bool, title string) Form {
 	form := Form{
-		edit:   edit,
-		parent: parent,
-		title:  textinput.New(),
+		edit:        edit,
+		parent:      parent,
+		titlePrompt: textinput.New(),
 	}
 
-	form.title.SetValue(title)
-	form.title.Focus()
+	form.titlePrompt.SetValue(title)
+	form.titlePrompt.Focus()
 
 	return form
 }
@@ -316,7 +308,7 @@ func (f Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	f.title, cmd = f.title.Update(msg)
+	f.titlePrompt, cmd = f.titlePrompt.Update(msg)
 	return f, cmd
 }
 
@@ -327,7 +319,7 @@ func (f Form) View() string {
 	} else {
 		headerView = styleHeader.Render("Create new task:")
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, headerView, f.title.View())
+	return lipgloss.JoinVertical(lipgloss.Left, headerView, f.titlePrompt.View())
 }
 
 //
@@ -341,54 +333,59 @@ const (
 	ClearCompletedTasks
 )
 
-type Confirm struct {
-	parent tea.Model
+type ConfirmPrompt struct {
+	Action       ConfirmAction
+	Confirmation bool
 
-	action       ConfirmAction
-	message      string
-	confirmation bool
+	message string
+	parent  tea.Model
 }
 
-func NewConfirm(parent tea.Model, action ConfirmAction, message string) *Confirm {
-	return &Confirm{
-		action:       action,
-		confirmation: true,
-		message:      message,
-		parent:       parent,
+func NewConfirmPrompt(parent tea.Model, action ConfirmAction, message string) *ConfirmPrompt {
+	return &ConfirmPrompt{
+		Action:       action,
+		Confirmation: true,
+
+		message: message,
+		parent:  parent,
 	}
 }
 
-func (c Confirm) Init() tea.Cmd {
+func (p ConfirmPrompt) Init() tea.Cmd {
 	return nil
 }
 
-func (c *Confirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (p *ConfirmPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Left) || msg.String() == "y":
-			c.confirmation = true
+			p.Confirmation = true
 
 		case key.Matches(msg, keys.Right) || msg.String() == "n":
-			c.confirmation = false
+			p.Confirmation = false
 
 		case key.Matches(msg, keys.Quit):
-			c.confirmation = false
+			p.Confirmation = false
 			fallthrough
 
 		case key.Matches(msg, keys.Enter):
-			return c.parent.Update(*c)
+			if p.Confirmation {
+				return p.parent.Update(*p)
+			} else {
+				return p.parent, nil
+			}
 		}
 	}
 
-	return c, nil
+	return p, nil
 }
 
-func (c Confirm) View() string {
+func (p ConfirmPrompt) View() string {
 	msgYes := "Yes"
 	msgNo := "No"
 
-	if c.confirmation {
+	if p.Confirmation {
 		msgYes = styleSelected.Render(msgYes)
 		msgNo = styleUnselected.Render(msgNo)
 	} else {
@@ -398,7 +395,7 @@ func (c Confirm) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		styleHeader.Render(c.message),
+		styleHeader.Render(p.message),
 		lipgloss.JoinHorizontal(lipgloss.Left, msgYes, msgNo),
 	)
 }

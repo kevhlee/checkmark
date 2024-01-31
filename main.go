@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	config, err := InitConfig()
+	config, err := InitTaskConfig()
 	if err != nil {
 		panic(err)
 	}
@@ -10,7 +10,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := StoreConfig(config); err != nil {
+	if err := StoreTaskConfig(config); err != nil {
 		panic(err)
 	}
 }
