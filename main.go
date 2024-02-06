@@ -1,16 +1,23 @@
 package main
 
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kevhlee/checkmark/config"
+	"github.com/kevhlee/checkmark/ui"
+)
+
 func main() {
-	config, err := InitTaskConfig()
+	cfg, err := config.Init()
 	if err != nil {
 		panic(err)
 	}
 
-	if err := StartTUI(config); err != nil {
+	program := tea.NewProgram(ui.New(cfg))
+	if _, err := program.Run(); err != nil {
 		panic(err)
 	}
 
-	if err := StoreTaskConfig(config); err != nil {
+	if err := config.Save(cfg); err != nil {
 		panic(err)
 	}
 }

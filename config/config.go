@@ -1,9 +1,11 @@
-package main
+package config
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/kevhlee/checkmark/task"
 )
 
 var (
@@ -11,50 +13,48 @@ var (
 	configFile string
 )
 
-type Task struct {
-	Name string `json:"name"`
-	Done bool   `json:"done"`
-}
-
-type TaskConfig struct {
-	Tasks []Task `json:"tasks"`
-}
-
-func InitTaskConfig() (*TaskConfig, error) {
+func init() {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	configDir = filepath.Join(homeDir, ".config", "checkmark")
 	configFile = filepath.Join(configDir, "config.json")
+}
+
+type Config struct {
+	Tasks []task.Task `json:"tasks"`
+}
+
+func Init() (Config, error) {
+	var cfg Config
 
 	if _, err := os.Stat(configDir); err != nil {
 		if !os.IsNotExist(err) {
-			return nil, err
+			return cfg, err
 		}
 		if err := os.MkdirAll(configDir, 0751); err != nil {
-			return nil, err
+			return cfg, err
 		}
 	}
 
-	config := TaskConfig{}
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &config, nil
+			return cfg, nil
 		}
-		return nil, err
+		return cfg, err
 	}
 
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return cfg, err
 	}
-	return &config, nil
+	return cfg, nil
 }
 
-func StoreTaskConfig(config *TaskConfig) error {
-	data, err := json.Marshal(config)
+func Save(cfg Config) error {
+	data, err := json.Marshal(cfg)
 	if err != nil {
 		return err
 	}
