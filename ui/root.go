@@ -126,11 +126,11 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case EditorModel:
 		switch msg.Action {
 		case AddNewTask:
-			m.tasks = append(m.tasks, task.Task{Name: msg.Name(), Priority: msg.Priority()})
+			m.tasks = append(m.tasks, task.Task{Name: msg.Name, Priority: msg.Priority})
 
 		case EditCurrentTask:
-			m.tasks[m.index].Name = msg.Name()
-			m.tasks[m.index].Priority = msg.Priority()
+			m.tasks[m.index].Name = msg.Name
+			m.tasks[m.index].Priority = msg.Priority
 		}
 
 		task.SortTasks(m.tasks)
@@ -210,7 +210,7 @@ func (m RootModel) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-        styleHeader.Render("Tasks:"),
+		styleHeader.Render("Tasks:"),
 		tasksView.String(),
 		m.help.View(m),
 	)

@@ -1,13 +1,19 @@
 package task
 
+import "fmt"
+
 type Priority int
 
-func (p Priority) String() string {
-	return priorityStringMap[p]
+func (p Priority) Name() string {
+	return priorityNameMap[p]
 }
 
 func (p Priority) Symbol() string {
 	return prioritySymbolMap[p]
+}
+
+func (p Priority) String() string {
+	return fmt.Sprintf("%s %s", prioritySymbolMap[p], priorityNameMap[p])
 }
 
 const (
@@ -17,7 +23,13 @@ const (
 )
 
 var (
-	priorityStringMap = map[Priority]string{
+	Priorities = []Priority{
+		LowPriority,
+		HighPriority,
+		FirePriority,
+	}
+
+	priorityNameMap = map[Priority]string{
 		LowPriority:  "Low",
 		HighPriority: "High",
 		FirePriority: "Fire",
