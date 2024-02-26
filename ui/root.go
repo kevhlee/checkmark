@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kevhlee/checkmark/config"
 	"github.com/kevhlee/checkmark/task"
 )
 
@@ -35,18 +34,18 @@ type RootKeyMap struct {
 }
 
 type RootModel struct {
+	Tasks    []task.Task
 	help     help.Model
 	index    int
 	keys     RootKeyMap
 	quitting bool
-	tasks    []task.Task
 }
 
-func New(cfg config.Config) *RootModel {
+func New(tasks []task.Task) *RootModel {
 	model := &RootModel{
+		Tasks:    tasks,
 		help:     help.New(),
 		index:    0,
-		tasks:    cfg.Tasks,
 		quitting: false,
 	}
 
@@ -113,27 +112,27 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfirmModel:
 		switch msg.Action {
 		case ClearCompletedTasks:
-			m.tasks = slices.DeleteFunc(m.tasks, func(t task.Task) bool {
+			m.Tasks = slices.DeleteFunc(m.Tasks, func(t task.Task) bool {
 				return t.Done
 			})
 			m.normalizeCursor()
 
 		case DeleteCurrentTask:
-			m.tasks = append(m.tasks[:m.index], m.tasks[m.index+1:]...)
+			m.Tasks = append(m.Tasks[:m.index], m.Tasks[m.index+1:]...)
 			m.normalizeCursor()
 		}
 
 	case EditorModel:
 		switch msg.Action {
 		case AddNewTask:
-			m.tasks = append(m.tasks, task.Task{Name: msg.Name, Priority: msg.Priority})
+			m.Tasks = append(m.Tasks, task.Task{Name: msg.Name, Priority: msg.Priority})
 
 		case EditCurrentTask:
-			m.tasks[m.index].Name = msg.Name
-			m.tasks[m.index].Priority = msg.Priority
+			m.Tasks[m.index].Name = msg.Name
+			m.Tasks[m.index].Priority = msg.Priority
 		}
 
-		task.SortTasks(m.tasks)
+		task.SortTasks(m.Tasks)
 
 	case tea.KeyMsg:
 		switch {
@@ -141,33 +140,33 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.index = max(m.index-1, 0)
 
 		case key.Matches(msg, m.keys.Down):
-			m.index = min(m.index+1, len(m.tasks)-1)
+			m.index = min(m.index+1, len(m.Tasks)-1)
 
 		case key.Matches(msg, m.keys.Add):
 			editor := NewEditor(m, AddNewTask, "", task.LowPriority)
 			return editor, editor.Init()
 
 		case key.Matches(msg, m.keys.Edit):
-			if len(m.tasks) > 0 {
-				editor := NewEditor(m, EditCurrentTask, m.tasks[m.index].Name, m.tasks[m.index].Priority)
+			if len(m.Tasks) > 0 {
+				editor := NewEditor(m, EditCurrentTask, m.Tasks[m.index].Name, m.Tasks[m.index].Priority)
 				return editor, editor.Init()
 			}
 
 		case key.Matches(msg, m.keys.Clear):
-			if len(m.tasks) > 0 {
+			if len(m.Tasks) > 0 {
 				confirm := NewConfirm(m, ClearCompletedTasks, "Clear completed tasks?")
 				return confirm, confirm.Init()
 			}
 
 		case key.Matches(msg, m.keys.Delete):
-			if len(m.tasks) > 0 {
-				confirm := NewConfirm(m, DeleteCurrentTask, fmt.Sprintf("Delete '%s'?", m.tasks[m.index].Name))
+			if len(m.Tasks) > 0 {
+				confirm := NewConfirm(m, DeleteCurrentTask, fmt.Sprintf("Delete '%s'?", m.Tasks[m.index].Name))
 				return confirm, confirm.Init()
 			}
 
 		case key.Matches(msg, m.keys.Mark):
-			if len(m.tasks) > 0 {
-				m.tasks[m.index].Done = !m.tasks[m.index].Done
+			if len(m.Tasks) > 0 {
+				m.Tasks[m.index].Done = !m.Tasks[m.index].Done
 			}
 
 		case key.Matches(msg, m.keys.Help):
@@ -189,7 +188,7 @@ func (m RootModel) View() string {
 
 	tasksView := strings.Builder{}
 
-	for i, task := range m.tasks {
+	for i, task := range m.Tasks {
 		if i == m.index {
 			tasksView.WriteString(styleCursor.Render("> "))
 		} else {
@@ -217,5 +216,5 @@ func (m RootModel) View() string {
 }
 
 func (m *RootModel) normalizeCursor() {
-	m.index = min(m.index, len(m.tasks)-1)
+	m.index = min(m.index, len(m.Tasks)-1)
 }
