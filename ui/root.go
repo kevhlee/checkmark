@@ -196,9 +196,9 @@ func (m RootModel) View() string {
 		}
 
 		if task.Done {
-			tasksView.WriteString(styleCheck.Render("✓  "))
+			tasksView.WriteString(styleCheck.Render("[✓] "))
 		} else {
-			tasksView.WriteString(styleCheck.Render("   "))
+			tasksView.WriteString(styleCheck.Render("[ ] "))
 		}
 
 		tasksView.WriteString(task.Priority.Symbol())
